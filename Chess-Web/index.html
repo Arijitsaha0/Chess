@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess — Python Powered</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sq-light: #f0d9b5;
+    --sq-dark: #b58863;
+    --bg: #0f0a04;
+    --gold: #d4a843;
+    --gold-dim: #7a5c1a;
+    --cream: #f5ead0;
+    --panel: #1a1008;
+    --red: #c0392b;
+    --green: #2ecc71;
+    --sq: 74px;
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 15% 15%, #2a1205 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 85%, #1a0d02 0%, transparent 55%);
+    font-family: 'Crimson Text', serif;
+    color: var(--cream);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    gap: 16px;
+  }
+
+  header {
+    text-align: center;
+    animation: fadeDown 0.6s ease both;
+  }
+  @keyframes fadeDown {
+    from { opacity:0; transform: translateY(-20px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 2.6rem;
+    font-weight: 900;
+    letter-spacing: 0.3em;
+    color: var(--gold);
+    text-shadow: 0 0 50px rgba(212,168,67,0.5), 0 2px 4px rgba(0,0,0,0.8);
+  }
+  .tagline {
+    font-style: italic;
+    color: var(--gold-dim);
+    font-size: 0.95rem;
+    letter-spacing: 0.15em;
+    margin-top: 2px;
+  }
+  .powered {
+    font-size: 0.7rem;
+    color: #4a3010;
+    letter-spacing: 0.2em;
+    margin-top: 4px;
+    font-family: 'Cinzel', serif;
+  }
+
+  .game-container {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    animation: fadeUp 0.7s ease 0.2s both;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(20px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  /* ── PANEL ── */
+  .panel {
+    width: 190px;
+    background: var(--panel);
+    border: 1px solid #3a2510;
+    border-radius: 4px;
+    padding: 18px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: calc(var(--sq) * 8);
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+  }
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    border-bottom: 1px solid #2a1a08;
+    padding-bottom: 10px;
+  }
+
+  .turn-block { display: flex; align-items: center; gap: 10px; }
+  .turn-gem {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--gold-dim);
+    transition: background 0.4s, box-shadow 0.4s;
+    flex-shrink: 0;
+  }
+  .turn-gem.white { background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.4); }
+  .turn-gem.black { background: #111; box-shadow: 0 0 8px rgba(0,0,0,0.6); }
+  .turn-label { font-family: 'Cinzel', serif; font-size: 0.8rem; }
+
+  .divider { border: none; border-top: 1px solid #2a1a08; }
+
+  .stat { font-size: 0.9rem; color: #b8925a; }
+  .stat span { color: var(--cream); font-weight: 600; }
+
+  .cap-title { font-size: 0.65rem; letter-spacing: 0.1em; color: var(--gold-dim); margin-bottom: 4px; font-family:'Cinzel',serif; }
+  .cap-pieces { font-size: 1.2rem; min-height: 28px; line-height: 1.6; word-break: break-all; color: var(--cream); }
+
+  .status-msg {
+    padding: 8px 10px;
+    border-radius: 3px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-align: center;
+    transition: all 0.3s;
+    display: none;
+  }
+  .status-msg.check  { display:block; background: rgba(192,57,43,0.2); border: 1px solid var(--red); color: #e74c3c; animation: pulse 1s infinite; }
+  .status-msg.info   { display:block; background: rgba(212,168,67,0.1); border: 1px solid var(--gold-dim); color: var(--gold); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  .btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    color: var(--gold-dim);
+    padding: 9px 12px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    margin-top: auto;
+  }
+  .btn:hover { background: var(--gold-dim); color: var(--bg); letter-spacing: 0.22em; }
+
+  /* ── BOARD ── */
+  .board-shell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .coord-row {
+    display: flex;
+    width: calc(var(--sq) * 8 + 36px);
+    padding-left: 18px;
+  }
+  .coord-col { display: flex; flex-direction: column; }
+  .coord-f {
+    width: var(--sq); text-align: center;
+    font-size: 0.6rem; color: var(--gold-dim);
+    font-family: 'Cinzel', serif; line-height: 18px; height: 18px;
+  }
+  .coord-r {
+    width: 18px; height: var(--sq);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; color: var(--gold-dim); font-family: 'Cinzel', serif;
+  }
+  .board-row { display: flex; }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(8, var(--sq));
+    grid-template-rows: repeat(8, var(--sq));
+    border: 3px solid #3a2510;
+    box-shadow:
+      0 0 0 1px #1a0d02,
+      0 0 80px rgba(0,0,0,0.9),
+      0 0 30px rgba(212,168,67,0.08);
+    position: relative;
+  }
+
+  .sq {
+    width: var(--sq); height: var(--sq);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: filter 0.1s;
+  }
+  .sq.light { background: var(--sq-light); }
+  .sq.dark  { background: var(--sq-dark); }
+  .sq.selected { box-shadow: inset 0 0 0 4px var(--green); }
+  .sq.in-check { background: rgba(192,57,43,0.65) !important; }
+
+  .sq.valid-empty::after {
+    content: '';
+    position: absolute;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: rgba(46,204,113,0.5);
+    pointer-events: none;
+    animation: dotPop 0.15s ease both;
+  }
+  .sq.valid-capture::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 3px solid rgba(46,204,113,0.65);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  @keyframes dotPop {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  .piece {
+    font-size: 46px;
+    line-height: 1;
+    user-select: none;
+    transition: transform 0.12s ease;
+    pointer-events: none;
+  }
+  .sq:hover .piece { transform: scale(1.1) translateY(-2px); }
+  .piece.white { color: #fff; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9)) drop-shadow(0 0 2px rgba(0,0,0,0.7)); }
+  .piece.black { color: #1a0e04; filter: drop-shadow(0 2px 3px rgba(255,255,255,0.15)) drop-shadow(1px 1px 0 rgba(100,60,20,0.4)); }
+
+  /* ── OVERLAY ── */
+  .overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.82);
+    backdrop-filter: blur(2px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    z-index: 20;
+  }
+  .overlay.show { display: flex; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .overlay-title {
+    font-family: 'Cinzel', serif;
+    font-size: 2.2rem; font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 40px rgba(212,168,67,0.7);
+    text-align: center; padding: 0 20px;
+  }
+  .overlay-sub { font-style: italic; color: #b8925a; font-size: 1rem; }
+  .overlay-btn {
+    font-family: 'Cinzel', serif; font-size: 0.75rem;
+    letter-spacing: 0.2em; background: var(--gold);
+    color: var(--bg); border: none; padding: 11px 28px;
+    cursor: pointer; margin-top: 10px; border-radius: 2px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .overlay-btn:hover { opacity: 0.88; transform: scale(1.03); }
+
+  /* ── CONNECTION STATUS ── */
+  .conn-bar {
+    font-size: 0.65rem; letter-spacing: 0.15em;
+    font-family: 'Cinzel', serif; color: #3a2510;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: #3a2510; transition: background 0.3s; }
+  .conn-dot.ok { background: var(--green); box-shadow: 0 0 6px rgba(46,204,113,0.5); }
+  .conn-dot.err { background: var(--red); }
+
+  @media (max-width: 700px) {
+    :root { --sq: 42px; }
+    .panel { display: none; }
+    h1 { font-size: 1.5rem; letter-spacing: 0.15em; }
+    .piece { font-size: 26px; }
+    .sq.valid-empty::after { width: 14px; height: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>♟ CHESS</h1>
+  <p class="tagline">A Game of Kings</p>
+  <p class="powered">PYTHON · FLASK · HTML</p>
+</header>
+
+<div class="game-container">
+
+  <!-- PANEL -->
+  <div class="panel">
+    <div class="panel-title">Game Status</div>
+
+    <div class="turn-block">
+      <div class="turn-gem white" id="turnGem"></div>
+      <div class="turn-label" id="turnLabel">White's Turn</div>
+    </div>
+
+    <hr class="divider">
+    <div class="stat">Moves: <span id="moveCount">0</span></div>
+
+    <div class="status-msg" id="statusMsg"></div>
+
+    <hr class="divider">
+    <div>
+      <div class="cap-title">WHITE CAPTURED</div>
+      <div class="cap-pieces" id="capW">—</div>
+    </div>
+    <div>
+      <div class="cap-title">BLACK CAPTURED</div>
+      <div class="cap-pieces" id="capB">—</div>
+    </div>
+
+    <hr class="divider">
+    <div>
+      <div class="cap-title">CONNECTION</div>
+      <div class="conn-bar">
+        <div class="conn-dot" id="connDot"></div>
+        <span id="connText">Connecting...</span>
+      </div>
+    </div>
+
+    <button class="btn" onclick="resetGame()">↺ NEW GAME</button>
+  </div>
+
+  <!-- BOARD -->
+  <div class="board-shell">
+    <div class="coord-row" id="coordTop"></div>
+    <div class="board-row">
+      <div class="coord-col" id="coordLeft"></div>
+      <div class="board" id="board">
+        <div class="overlay" id="overlay">
+          <div class="overlay-title" id="overlayTitle"></div>
+          <div class="overlay-sub" id="overlaySub"></div>
+          <button class="overlay-btn" onclick="resetGame()">Play Again</button>
+        </div>
+      </div>
+      <div class="coord-col" id="coordRight"></div>
+    </div>
+    <div class="coord-row" id="coordBot"></div>
+  </div>
+
+</div>
+
+<script>
+// ─── SYMBOLS ─────────────────────────────────────────────────
+const SYM = {
+  wK:'♔',wQ:'♕',wR:'♖',wB:'♗',wN:'♘',wP:'♙',
+  bK:'♚',bQ:'♛',bR:'♜',bB:'♝',bN:'♞',bP:'♟'
+};
+
+let selected = null;
+let validMoves = [];
+let gameState = null;
+
+// ─── API HELPERS ─────────────────────────────────────────────
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  return res.json();
+}
+
+function setConn(ok) {
+  const dot = document.getElementById('connDot');
+  const txt = document.getElementById('connText');
+  dot.className = 'conn-dot ' + (ok ? 'ok' : 'err');
+  txt.textContent = ok ? 'Python Connected' : 'Server Offline';
+}
+
+// ─── BUILD BOARD DOM ─────────────────────────────────────────
+function buildBoard() {
+  const files = ['a','b','c','d','e','f','g','h'];
+
+  // Top / bottom coords
+  ['coordTop','coordBot'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    files.forEach(f => {
+      const d = document.createElement('div');
+      d.className = 'coord-f'; d.textContent = f;
+      el.appendChild(d);
+    });
+  });
+
+  // Left / right coords
+  ['coordLeft','coordRight'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    for (let i = 8; i >= 1; i--) {
+      const d = document.createElement('div');
+      d.className = 'coord-r'; d.textContent = i;
+      el.appendChild(d);
+    }
+  });
+
+  // Squares
+  const boardEl = document.getElementById('board');
+  const overlay = document.getElementById('overlay');
+  boardEl.innerHTML = '';
+  boardEl.appendChild(overlay);
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+      sq.dataset.r = r; sq.dataset.c = c;
+      sq.onclick = () => handleClick(r, c);
+      const p = document.createElement('span');
+      p.className = 'piece';
+      sq.appendChild(p);
+      boardEl.appendChild(sq);
+    }
+  }
+}
+
+// ─── RENDER STATE ────────────────────────────────────────────
+function renderState(state) {
+  gameState = state;
+  const board = state.board;
+  const turn = state.turn;
+
+  // Check which king is in check
+  let checkKingPos = null;
+  if (state.status === 'CHECK!' || state.game_over) {
+    // find king of current turn
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++)
+      if (board[r][c] === turn + 'K') checkKingPos = [r, c];
+  }
+
+  document.querySelectorAll('.sq').forEach(sq => {
+    const r = +sq.dataset.r, c = +sq.dataset.c;
+    const piece = board[r][c];
+
+    // Reset classes
+    sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+    if (selected && selected[0] === r && selected[1] === c) sq.classList.add('selected');
+    if (checkKingPos && checkKingPos[0] === r && checkKingPos[1] === c && state.status === 'CHECK!')
+      sq.classList.add('in-check');
+
+    const isValid = validMoves.some(([mr,mc]) => mr === r && mc === c);
+    if (isValid) {
+      if (piece !== '--') sq.classList.add('valid-capture');
+      else sq.classList.add('valid-empty');
+    }
+
+    // Piece
+    const pieceEl = sq.querySelector('.piece');
+    if (piece !== '--') {
+      pieceEl.textContent = SYM[piece] || piece[1];
+      pieceEl.className = 'piece ' + (piece[0] === 'w' ? 'white' : 'black');
+    } else {
+      pieceEl.textContent = '';
+      pieceEl.className = 'piece';
+    }
+  });
+
+  // Panel
+  const gem = document.getElementById('turnGem');
+  gem.className = 'turn-gem ' + (turn === 'w' ? 'white' : 'black');
+  document.getElementById('turnLabel').textContent = turn === 'w' ? "White's Turn" : "Black's Turn";
+  document.getElementById('moveCount').textContent = state.move_count;
+
+  // Captured (show chess symbols)
+  const capSymbols = { K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙' };
+  const wCap = state.captured_w.map(p => capSymbols[p] || p).join(' ');
+  const bCap = state.captured_b.map(p => capSymbols[p] || p).join(' ');
+  document.getElementById('capW').textContent = wCap || '—';
+  document.getElementById('capB').textContent = bCap || '—';
+
+  // Status
+  const statusEl = document.getElementById('statusMsg');
+  const s = state.status;
+  statusEl.textContent = s;
+  statusEl.className = 'status-msg' + (s === 'CHECK!' ? ' check' : s ? ' info' : '');
+
+  // Game over overlay
+  if (state.game_over) {
+    document.getElementById('overlayTitle').textContent = s;
+    document.getElementById('overlaySub').textContent =
+      s.includes('Wins') ? 'Checkmate!' : 'No legal moves remain.';
+    document.getElementById('overlay').classList.add('show');
+  }
+}
+
+// ─── CLICK HANDLER ───────────────────────────────────────────
+async function handleClick(row, col) {
+  if (!gameState || gameState.game_over) return;
+
+  if (selected === null) {
+    // Try selecting a piece
+    const piece = gameState.board[row][col];
+    if (piece === '--' || piece[0] !== gameState.turn) return;
+
+    const data = await api('/moves', 'POST', { row, col });
+    if (data.moves && data.moves.length > 0) {
+      selected = [row, col];
+      validMoves = data.moves;
+      renderState(gameState);
+    }
+  } else {
+    const isValid = validMoves.some(([r,c]) => r === row && c === col);
+
+    if (isValid) {
+      // Make the move
+      const state = await api('/move', 'POST', {
+        from_row: selected[0], from_col: selected[1],
+        to_row: row, to_col: col
+      });
+      selected = null; validMoves = [];
+      renderState(state);
+    } else if (gameState.board[row][col][0] === gameState.turn) {
+      // Select different piece
+      const data = await api('/moves', 'POST', { row, col });
+      selected = [row, col];
+      validMoves = data.moves || [];
+      renderState(gameState);
+    } else {
+      selected = null; validMoves = [];
+      renderState(gameState);
+    }
+  }
+}
+
+// ─── RESET ───────────────────────────────────────────────────
+async function resetGame() {
+  selected = null; validMoves = [];
+  document.getElementById('overlay').classList.remove('show');
+  const state = await api('/reset', 'POST');
+  renderState(state);
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+async function init() {
+  buildBoard();
+  try {
+    const state = await api('/state');
+    setConn(true);
+    renderState(state);
+  } catch(e) {
+    setConn(false);
+    console.error('Could not connect to Python server:', e);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
